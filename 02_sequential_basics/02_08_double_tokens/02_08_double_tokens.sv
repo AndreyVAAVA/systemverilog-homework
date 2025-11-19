@@ -25,5 +25,32 @@ module double_tokens
     // a -> 10010011000110100001100100
     // b -> 11011011110111111001111110
 
+    logic [7:0] cntr = 0;
+    logic overflow_clear;
+    logic ron;
 
+    always_ff @ (posedge clk) begin
+	    if (rst) begin
+		    overflow_clear <= 1'b0;
+	    end
+	    if (~overflow) begin
+		    if (cntr > 200) begin
+			    overflow_clear <= 1'b1;
+		    end
+		    else begin
+			    if (a) begin
+				    cntr += 2;
+			    end
+			    if (cntr) begin
+				    ron <= 1'b1;
+				    cntr -= 1;
+			    end
+			    else begin
+				    ron <= 1'b0;
+			    end
+		    end
+	    end
+    end
+    assign b = ron;
+    assign overflow = overflow_clear;
 endmodule
