@@ -30,4 +30,31 @@ module parallel_to_serial
     // Check the waveform diagram in the README for better understanding.
 
 
+    logic [width - 1:0] par_data;
+    logic taken;
+    logic [2:0] cur_numb;
+    
+    assign busy = taken;
+    assign serial_data = par_data[0];
+    assign serial_valid = taken;
+    always_ff @ (posedge clk) begin
+	    if (rst) begin
+		    par_data <= '0;
+		    taken <= 1'b0;
+		    cur_numb <= '0;
+	    end
+	    if (parallel_valid && !taken) begin
+		    par_data <= parallel_data;
+		    cur_numb <= '0;
+		    taken <= 1'b1;
+	    end
+	    else if (taken) begin
+		    par_data <= {1'b0, par_data[width-1:1]};
+		    cur_numb <= cur_numb + 1;
+		    
+		    if (cur_numb == width - 1) begin
+			    taken <= 1'b0;
+		    end 
+	    end
+    end
 endmodule
