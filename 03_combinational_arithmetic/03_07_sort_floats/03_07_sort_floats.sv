@@ -86,5 +86,66 @@ module sort_three_floats (
     // The FLEN parameter is defined in the "import/preprocessed/cvw/config-shared.vh" file
     // and usually equal to the bit width of the double-precision floating-point number, FP64, 64 bits.
 
+    logic [0:2][FLEN - 1:0] filtered1;
+    logic [0:2][FLEN - 1:0] filtered2;
+
+    logic sort01_step1, sort12_step2, sort01_step3;
+    logic err01_step1, err12_step2, err01_step3;
+
+    f_less_or_equal comp01_step1 (
+        .a   ( unsorted[0]      ),
+        .b   ( unsorted[1]      ),
+        .res ( sort01_step1     ),
+        .err ( err01_step1     )
+    );
+
+    f_less_or_equal comp12_step2 (
+        .a   ( filtered1[1]     ),
+        .b   ( filtered1[2]     ),
+        .res ( sort12_step2     ),
+        .err ( err12_step2     )
+    );
+
+    f_less_or_equal comp01_step3 (
+        .a   ( filtered2[0]     ),
+        .b   ( filtered2[1]     ),
+        .res ( sort01_step3     ),
+        .err ( err01_step3     )
+    );
+
+    always_comb begin
+        // Step 1
+        if (sort01_step1) begin
+            filtered1[0] = unsorted[0];
+            filtered1[1] = unsorted[1];
+        end
+        else begin
+            filtered1[0] = unsorted[1];
+            filtered1[1] = unsorted[0];
+        end
+        filtered1[2] = unsorted[2];
+	// Step 2
+        if (sort12_step2) begin
+            filtered2[1] = filtered1[1];
+            filtered2[2] = filtered1[2];
+        end
+        else begin
+            filtered2[1] = filtered1[2];
+            filtered2[2] = filtered1[1];
+        end
+        filtered2[0] = filtered1[0];
+	// Step 3
+        if (sort01_step3) begin
+            sorted[0] = filtered2[0];
+            sorted[1] = filtered2[1];
+        end
+        else begin
+            sorted[0] = filtered2[1];
+            sorted[1] = filtered2[0];
+        end
+        sorted[2] = filtered2[2];
+    end
+
+    assign err = err01_step1 | err12_step2 | err01_step3;
 
 endmodule

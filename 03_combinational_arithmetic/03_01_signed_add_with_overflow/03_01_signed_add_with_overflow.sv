@@ -39,4 +39,9 @@ module signed_add_with_overflow
   // Otherwise the 'overflow' should be set to 0.
 
 
+  assign sum = a + b;
+  // assign overflow = (~a[3] & ~b[3] & sum[3]) | (a[3] & b[3] & ~sum[3]);
+  assign overflow = (a[3] == b[3]) && (sum[3] != a[3]);
+  
+
 endmodule

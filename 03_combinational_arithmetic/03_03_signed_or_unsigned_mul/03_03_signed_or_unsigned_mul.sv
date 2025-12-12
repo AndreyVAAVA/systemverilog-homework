@@ -53,4 +53,12 @@ module signed_or_unsigned_mul
   output [2 * n - 1:0] res
 );
 
+  logic [2 * n - 1:0] temp_res;
+  always_comb begin
+	  if (signed_mul)
+		  temp_res = $signed(a) * $signed(b);
+	  else
+		  temp_res = a * b;
+  end
+  assign res = temp_res;
 endmodule
