@@ -46,8 +46,9 @@ module arithmetic_right_shift_of_N_by_S_using_for_inside_always
   // that iterates through the individual bits of the input.
 
   always_comb 
-	  for (int i = N-1; i >= 0; i--)
-		  res[i] = i >= N - S ? a[N-1] : a[i+S];
+	  for (int i = N-1; i >= 0; i--) begin
+		  res[i] = (i >= N - S) ? a[N-1] : a[i+S];
+	  end
 
 endmodule
 
