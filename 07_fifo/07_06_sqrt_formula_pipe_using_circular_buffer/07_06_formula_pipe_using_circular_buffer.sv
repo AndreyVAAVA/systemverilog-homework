@@ -42,5 +42,74 @@ module formula_2_pipe_using_circular
     // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
     // You can download this issue from https://fpga-systems.ru/fsm#state_0
 
+    localparam latency = 16; 
 
+    // --- Слой 1: sqrt(c) ---
+    wire [31:0] sqrt_c_res;
+    wire        sqrt_c_vld;
+
+    isqrt #(.n_pipe_stages(latency)) i_isqrt_1 (
+        .clk   ( clk        ),
+        .rst   ( rst        ),
+        .x_vld ( arg_vld    ),
+        .x     ( c          ),
+        .y_vld ( sqrt_c_vld ),
+        .y     ( sqrt_c_res )
+    );
+
+    wire [31:0] b_delayed;
+    wire        b_vld;
+    circular_buffer_with_valid #(.width(32), .depth(latency)) i_buf_b (
+        .clk      ( clk     ),
+        .rst      ( rst     ),
+        .in_valid ( arg_vld ),
+        .in_data  ( b       ),
+        .out_valid( b_vld   ),
+        .out_data ( b_delayed )
+    );
+
+    wire [31:0] a_st1_delayed;
+    wire        a_st1_vld;
+    circular_buffer_with_valid #(.width(32), .depth(latency)) i_buf_a_st1 (
+        .clk      ( clk           ),
+        .rst      ( rst           ),
+        .in_valid ( arg_vld       ),
+        .in_data  ( a             ),
+        .out_valid( a_st1_vld     ),
+        .out_data ( a_st1_delayed )
+    );
+
+    // --- Слой 2: sqrt(b + sqrt(c)) ---
+    wire [31:0] sqrt_bc_res;
+    wire        sqrt_bc_vld;
+
+    isqrt #(.n_pipe_stages(latency)) i_isqrt_2 (
+        .clk   ( clk             ),
+        .rst   ( rst             ),
+        .x_vld ( sqrt_c_vld      ),
+        .x     ( b_delayed + sqrt_c_res ),
+        .y_vld ( sqrt_bc_vld     ),
+        .y     ( sqrt_bc_res     )
+    );
+
+    wire [31:0] a_st2_delayed;
+    wire        a_st2_vld;
+    circular_buffer_with_valid #(.width(32), .depth(latency)) i_buf_a_st2 (
+        .clk      ( clk           ),
+        .rst      ( rst           ),
+        .in_valid ( a_st1_vld     ),
+        .in_data  ( a_st1_delayed ),
+        .out_valid( a_st2_vld     ),
+        .out_data ( a_st2_delayed )
+    );
+
+    // --- Слой 3: sqrt(a + sqrt(b + sqrt(c))) ---
+    isqrt #(.n_pipe_stages(latency)) i_isqrt_3 (
+        .clk   ( clk             ),
+        .rst   ( rst             ),
+        .x_vld ( sqrt_bc_vld     ),
+        .x     ( a_st2_delayed + sqrt_bc_res ),
+        .y_vld ( res_vld         ),
+        .y     ( res             )
+    );
 endmodule

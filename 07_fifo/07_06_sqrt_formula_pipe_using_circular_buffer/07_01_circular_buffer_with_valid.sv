@@ -96,5 +96,37 @@ module circular_buffer_with_valid
 
     // Insert here your solution from previous task.
 
+	    localparam pointer_width = $clog2 (depth);
+    localparam [pointer_width - 1:0] max_ptr = pointer_width' (depth - 1);
 
+    logic [pointer_width - 1:0] ptr;
+
+    // 1. Указатель должен двигаться КАЖДЫЙ такт, чтобы соответствовать 
+    // эталонной модели (expected_out_vld) из тестбенча.
+    always_ff @ (posedge clk or posedge rst)
+        if (rst)
+            ptr <= '0;
+        else
+            ptr <= ( ptr == max_ptr ) ? '0 : ptr + 1'b1;
+
+    // 2. Память для данных
+    logic [width - 1:0] data [0: depth - 1];
+
+    always_ff @ (posedge clk)
+        if (in_valid) // Записываем данные, только если они валидны
+            data [ptr] <= in_data;
+
+    // 3. Память для хранения самого признака валидности (как в reference модели)
+    // Она должна сбрасываться в 0, чтобы первые такты на выходе был 0.
+    logic [depth - 1:0] vld_bits;
+
+    always_ff @ (posedge clk or posedge rst)
+        if (rst)
+            vld_bits <= '0;
+        else
+            vld_bits [ptr] <= in_valid;
+
+    // 4. Выходы
+    assign out_data  = data [ptr];
+    assign out_valid = vld_bits [ptr];
 endmodule
