@@ -61,5 +61,83 @@ module formula_1_pipe_aware_fsm
     // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
     // You can download this issue from https://fpga-systems.ru/fsm#state_0
 
+	// Состояния конечного автомата
+    typedef enum logic [1:0] {
+        IDLE    = 2'b00,
+        FEED_B  = 2'b01,
+        FEED_C  = 2'b10,
+        COLLECT = 2'b11
+    } state_e;
+
+    state_e state;
+
+    // Регистры для хранения входных данных и промежуточной суммы
+    logic [31:0] b_reg, c_reg;
+    logic [31:0] sum_acc;
+    logic [1:0]  res_cnt; // Счетчик полученных результатов (нужно 3)
+
+    // Логика FSM и управления данными
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            state       <= IDLE;
+            isqrt_x_vld <= 1'b0;
+            isqrt_x     <= 32'b0;
+            res_vld     <= 1'b0;
+            res         <= 32'b0;
+            res_cnt     <= 2'b0;
+            sum_acc     <= 32'b0;
+        end else begin
+            // По умолчанию сбрасываем флаг готовности результата
+            res_vld <= 1'b0;
+
+            case (state)
+                IDLE: begin
+                    if (arg_vld) begin
+                        // Сразу отправляем 'a' в конвейер isqrt
+                        isqrt_x_vld <= 1'b1;
+                        isqrt_x     <= a;
+                        // Сохраняем остальные аргументы
+                        b_reg       <= b;
+                        c_reg       <= c;
+                        sum_acc     <= 32'b0;
+                        res_cnt     <= 2'b0;
+                        state       <= FEED_B;
+                    end else begin
+                        isqrt_x_vld <= 1'b0;
+                    end
+                end
+
+                FEED_B: begin
+                    // Отправляем 'b' в следующем такте
+                    isqrt_x_vld <= 1'b1;
+                    isqrt_x     <= b_reg;
+                    state       <= FEED_C;
+                end
+
+                FEED_C: begin
+                    // Отправляем 'c'
+                    isqrt_x_vld <= 1'b1;
+                    isqrt_x     <= c_reg;
+                    state       <= COLLECT;
+                end
+
+                COLLECT: begin
+                    isqrt_x_vld <= 1'b0; // Перестаем подавать данные
+                    
+                    // Ждем и собираем 3 результата из конвейера
+                    if (isqrt_y_vld) begin
+                        if (res_cnt == 2'b10) begin // Пришел 3-й результат
+                            res     <= sum_acc + 32'(isqrt_y);
+                            res_vld <= 1'b1;
+                            state   <= IDLE;
+                        end else begin
+                            sum_acc <= sum_acc + 32'(isqrt_y);
+                            res_cnt <= res_cnt + 1'b1;
+                        end
+                    end
+                end
+            endcase
+        end
+    end
 
 endmodule
