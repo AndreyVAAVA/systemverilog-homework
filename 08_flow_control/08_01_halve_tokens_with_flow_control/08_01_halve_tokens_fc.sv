@@ -33,5 +33,31 @@ module halve_tokens_with_flow_control
     // down_data      ->   0100_0100_0001_0000
     // up_ready       ->   1111_1111_0101_1000
 
+    logic state_reg;      // Состояние
+    logic is_even_token;  // Флаг, что текущая '1' — вторая в паре
+    logic transfer_en;    // Сигнал успешного такта
+
+    // Логика определения второй единицы
+    assign is_even_token = up_token & state_reg;
+    
+    // Условие передачи данных на входе
+    assign transfer_en   = up_valid & up_ready;
+
+    // Работа с регистром состояния
+    always_ff @ (posedge clk) begin
+        if (rst) begin
+            state_reg <= 1'b0;
+        end else if (transfer_en & up_token) begin
+            state_reg <= ~state_reg;
+        end
+    end
+
+    assign down_valid = up_valid;
+	
+    // Данные '1' выдаются только если это вторая единица в паре и все готовы
+    assign down_data  = up_valid & is_even_token & down_ready;
+    
+    // Готовность принимать (если потребитель готов ИЛИ если текущий токен нам не нужен (нужно его отбросить))
+    assign up_ready   = up_valid & (down_ready | ~is_even_token);
 
 endmodule

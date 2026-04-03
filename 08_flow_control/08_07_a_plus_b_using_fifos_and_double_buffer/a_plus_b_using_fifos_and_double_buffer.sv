@@ -49,6 +49,11 @@ module a_plus_b_using_fifos_and_double_buffer
     // assign a_fifo_push       = ...
     // assign a_fifo_write_data = ...
 
+    // Мы готовы принимать данные в FIFO A, если оно не заполнено
+    assign a_ready           = ~a_fifo_full;
+    // Запись в FIFO A происходит при наличии валидных данных и готовности
+    assign a_fifo_push       = a_valid & a_ready;
+    assign a_fifo_write_data = a_data;
 
     //------------------------------------------------------------------------
 
@@ -79,6 +84,12 @@ module a_plus_b_using_fifos_and_double_buffer
     //
     // assign b_fifo_push       = ...
     // assign b_fifo_write_data = ...
+	
+	// Мы готовы принимать данные в FIFO B, если оно не заполнено
+    assign b_ready           = ~b_fifo_full;
+    // Запись в FIFO B происходит при наличии валидных данных и готовности
+    assign b_fifo_push       = b_valid & b_ready;
+    assign b_fifo_write_data = b_data;
 
 
     //------------------------------------------------------------------------
@@ -92,6 +103,21 @@ module a_plus_b_using_fifos_and_double_buffer
     // assign a_fifo_pop = ...
     // assign b_fifo_pop = ...
 
+	// Результат сложения валиден только если оба входных FIFO НЕ пусты
+    wire                  sum_up_valid = ~a_fifo_empty & ~b_fifo_empty;
+    
+    // Провод для сигнала готовности от buffer_sum (объявлен в шаблоне)
+    wire                  sum_up_ready; 
+    
+    // Сама операция сложения данных, считанных из FIFO
+    wire [width - 1:0]    sum_up_data  = a_fifo_read_data + b_fifo_read_data;
+
+    // Мы "выталкиваем" (pop) данные из ОБОИХ FIFO одновременно только тогда,
+    // когда произошел успешный такт передачи (handshake) в выходной буфер.
+    // Условие (sum_up_valid & sum_up_ready) гарантирует, что оба слагаемых 
+    // присутствуют и результат сложения принят в buffer_sum.
+    assign a_fifo_pop = sum_up_valid & sum_up_ready;
+    assign b_fifo_pop = sum_up_valid & sum_up_ready;
 
     //------------------------------------------------------------------------
 

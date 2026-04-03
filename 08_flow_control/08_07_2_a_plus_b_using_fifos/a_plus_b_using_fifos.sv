@@ -77,7 +77,22 @@ module a_plus_b_using_fifos
     //
     // assign a_down_ready = ...
     // assign b_down_ready = ...
+	
+	// 1. Поток валиден только тогда, когда валидны оба слагаемых
+    wire                  sum_up_valid = a_down_valid & b_down_valid;
+    
+    // 2. Объявляем провод для ready от fifo_sum. 
+    // Он не требует присвоения через assign, так как его запитывает сам модуль fifo_sum
+    wire                  sum_up_ready; 
+    
+    // 3. Данные суммы — это просто сложение выходов двух FIFO
+    wire [width - 1:0]    sum_up_data  = a_down_data + b_down_data;
 
+    // 4. Мы "вытаскиваем" данные из входных FIFO (pop / ready) только в том случае,
+    // когда произошел успешный такт передачи (рукопожатие) в выходное FIFO.
+    // Это гарантирует, что данные не потеряются и потоки не разойдутся.
+    assign a_down_ready = sum_up_valid & sum_up_ready;
+    assign b_down_ready = sum_up_valid & sum_up_ready;
 
     //------------------------------------------------------------------------
 
